@@ -60,12 +60,9 @@ def encrypt_decrypt_image(image_path, key):
     # Decrypt the data
     decrypted_data = cipher.decrypt(encrypted_data)
 
-    # Unpad the decrypted data
-    unpadded_data = unpad(decrypted_data, AES.block_size)
-
     # Convert decrypted data back to an array and reshape it
-    decrypted_array = np.frombuffer(unpadded_data, dtype=np.uint8)
-    decrypted_image = decrypted_array.reshape(img_data.shape)
+    decrypted_array = np.frombuffer(decrypted_data, dtype=np.uint8)
+    decrypted_image = decrypted_array[:flat_data.size].reshape(img_data.shape)
 
     # Save the decrypted image
     img_dec = Image.fromarray(decrypted_image)

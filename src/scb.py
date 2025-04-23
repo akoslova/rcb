@@ -31,7 +31,7 @@ def sha256_custom(data, tao):
     
     return truncated_hash
 
-def scb_encrypt(cipher, data, tao, sigma, key):
+def scb_encrypt(cipher, data, sigma, tao, key):
     """Encrypts data using the SCB mode.
     Args:
         cipher (AES): The AES cipher object.
@@ -51,7 +51,7 @@ def scb_encrypt(cipher, data, tao, sigma, key):
         raise ValueError("tao must be between 1 and 16")
 
     # check that the sum of tao and sigma is less than 16
-    if tao + sigma > 16:
+    if (tao + sigma) > 16:
         raise ValueError("tao + sigma must be less than 16")
 
     # check if the key is 16 bytes
@@ -72,21 +72,19 @@ def scb_encrypt(cipher, data, tao, sigma, key):
 
         if h not in S:
             C_i = cipher.encrypt(M_i)
-            S[h] = b'0' * sigma
+            S[h] = 0
 
         else:
-            R = b'0' * (16 - sigma - tao) + S[h] + h
+            R = b'0' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
             # XOR each pair of bytes and build a new bytes object
             # zip(a, b) pairs up each byte from a and b
             C_i = cipher.encrypt(bytes([x ^ y for x, y in zip(R, key)]))
-            counter = int.from_bytes(S[h], byteorder='big')
-            counter = (counter + 1) % MAX_COUNTER
-            S[h] = counter.to_bytes(16, byteorder='big')
+            S[h] = (S[h] + 1) % MAX_COUNTER
         C += C_i
 
     return C
 
-def scb_decrypt(cipher, data, tao, sigma, key):
+def scb_decrypt(cipher, data, sigma, tao, key):
     """Decrypts data using the SCB mode.
     Args:
         cipher (AES): The AES cipher object.
@@ -106,7 +104,7 @@ def scb_decrypt(cipher, data, tao, sigma, key):
         raise ValueError("tao must be between 1 and 16")
 
     # check that the sum of tao and sigma is less than 16
-    if tao + sigma > 16:
+    if (tao + sigma) > 16:
         raise ValueError("tao + sigma must be less than 16")
 
     # check if the key is 16 bytes
@@ -119,6 +117,12 @@ def scb_decrypt(cipher, data, tao, sigma, key):
     # max hash
     MAX_HASH = 2 ** (8 * tao)
 
+    # max counter
+    MAX_COUNTER = 2 ** (8 * sigma)
+
+    # threshold for R
+    threshold = 2**(MAX_HASH + MAX_COUNTER)
+
     # loop over every 16 bits of the data
     for i in range(0, len(data), 16):
 
@@ -126,12 +130,12 @@ def scb_decrypt(cipher, data, tao, sigma, key):
         C_i = data[i:i+16]
         # M_i 16 bytes
         M_i = cipher.decrypt(C_i)
-        # R
+        # XOR key with M_i and convert to an int
         R = int.from_bytes(bytes(a ^ b for a, b in zip(key, M_i)), byteorder='big')
         h_int = R % MAX_HASH
-        h = h_int.to_bytes(16, byteorder='big')
+        h = h_int.to_bytes(tao, byteorder='big')
 
-        if R < 2**(sigma + tao) and h in T:
+        if R < threshold and h in T:
             M_i = T[h].zfill(16)
 
         else:
@@ -143,7 +147,7 @@ def scb_decrypt(cipher, data, tao, sigma, key):
     return M
 
 
-def encrypt_image(image_path, tao, sigma, key):
+def encrypt_image(image_path, sigma, tao, key):
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')
@@ -160,7 +164,7 @@ def encrypt_image(image_path, tao, sigma, key):
     padded_data = pad(flat_data.tobytes(), AES.block_size)
 
     # Encrypt the padded data
-    encrypted_data = scb_encrypt(cipher, padded_data, tao, sigma, key)
+    encrypted_data = scb_encrypt(cipher, padded_data, sigma, tao, key)
 
     # Convert encrypted data back to an array and reshape it
     encrypted_array = np.frombuffer(encrypted_data, dtype=np.uint8)
@@ -169,14 +173,14 @@ def encrypt_image(image_path, tao, sigma, key):
     # Save the encrypted image
     img_enc = Image.fromarray(encrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_SCB_tao_' + str(tao) + '_sigma_' + str(sigma) + '_enc.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_SCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_enc.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
     enc_img_path = os.path.join(parent_dir, "test", "sec", "SCB", img_name)
     img_enc.save(enc_img_path)
 
-def encrypt_decrypt_image(image_path, tao, sigma, key):
+def encrypt_decrypt_image(image_path, sigma, tao, key):
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')
@@ -193,13 +197,10 @@ def encrypt_decrypt_image(image_path, tao, sigma, key):
     padded_data = pad(flat_data.tobytes(), AES.block_size)
 
     # Encrypt the padded data
-    encrypted_data = scb_encrypt(cipher, padded_data, tao, sigma, key)
+    encrypted_data = scb_encrypt(cipher, padded_data, sigma, tao, key)
 
     # Decrypt the data
-    decrypted_data = scb_decrypt(cipher, encrypted_data, tao, sigma, key)
-
-    # Unpad the decrypted data
-    #unpadded_data = unpad(decrypted_data, AES.block_size)
+    decrypted_data = scb_decrypt(cipher, encrypted_data, sigma, tao, key)
     
     # Convert decrypted data back to an array and reshape it
     decrypted_array = np.frombuffer(decrypted_data, dtype=np.uint8)
@@ -208,44 +209,42 @@ def encrypt_decrypt_image(image_path, tao, sigma, key):
     # Save the decrypted image
     img_dec = Image.fromarray(decrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_SCB_tao_' + str(tao) + '_sigma_' + str(sigma) + '_encdec.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_SCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
     dec_img_path = os.path.join(parent_dir, "test", "cor", "SCB", img_name)
     img_dec.save(dec_img_path)
-  
-
 
 def main():
     # check for the correct number of arguments
-    if len(sys.argv) > 4 or len(sys.argv) < 3:
-        print('Usage: python ecb.py <image_path> <key> <mode> or python ecb.py <image_path> <mode>')
+    if len(sys.argv) > 6 or len(sys.argv) < 5:
+        print('Usage: python scb.py <image_path> <key> <sigma> <tao> <mode> or python scb.py <image_path> <sigma> <tao> <mode>')
         sys.exit(1)
 
     # get the image path
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
     image_path = os.path.join(parent_dir, "test", "original", sys.argv[1])
-    #image_path = sys.argv[1]
 
-    tao = 13
-    sigma = 3
-
-    if len(sys.argv) == 4:
+    if len(sys.argv) == 6:
         # get the key and mode
         key = sys.argv[2].encode()
-        mode = sys.argv[3]
+        sigma = int(sys.argv[3])
+        tao = int(sys.argv[4])
+        mode = sys.argv[5]
     else:
         key_str = "MySecretKey12345"  # 16 characters
         key = key_str.encode('utf-8')  # Now it's a 16-byte key
-        mode = sys.argv[2]
+        sigma = int(sys.argv[2])
+        tao = int(sys.argv[3])
+        mode = sys.argv[4]
 
     # encrypt or decrypt the image
         if mode == 'enc':
-            encrypt_image(image_path, tao, sigma, key)
+            encrypt_image(image_path, sigma, tao, key)
         elif mode == 'encdec':
-            encrypt_decrypt_image(image_path, tao, sigma, key)
+            encrypt_decrypt_image(image_path, sigma, tao, key)
         else:
             print('Invalid mode')
             sys.exit(1)
@@ -253,6 +252,6 @@ def main():
 if __name__ == '__main__':
     main()
 
-# Usage: python scb.py <image_path> <key> <mode> or python scb.py <image_path> <mode>
-# Example: python scb.py image.png key enc or python scb.py image.png enc
-# Example: python scb.py encrypted_image.png key encdec or python scb.py encrypted_image.png encdec
+# Usage: python scb.py <image_path> <key> <sigma> <tao> <mode> or python scb.py <image_path> <sigma> <tao> <mode>
+# Example: python scb.py image.png key 2 2 enc or python scb.py image.png 2 2 enc
+# Example: python scb.py encrypted_image.png key 2 2 encdec or python scb.py encrypted_image.png 2 2 encdec
