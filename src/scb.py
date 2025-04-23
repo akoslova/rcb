@@ -116,25 +116,30 @@ def scb_decrypt(cipher, data, tao, sigma, key):
     # cipher bytes
     M = b''
 
-    # maximum counter value
-    MAX_COUNTER = 2 ** (8 * sigma)
+    # max hash
+    MAX_HASH = 2 ** (8 * tao)
 
     # loop over every 16 bits of the data
     for i in range(0, len(data), 16):
 
+        # C_i 16 bytes
         C_i = data[i:i+16]
+        # M_i 16 bytes
         M_i = cipher.decrypt(C_i)
-        R = bytes([x ^ y for x, y in zip(key, M_i)])
-        h = int.from_bytes(R, byteorder='big') % 2**tao
+        # R
+        R = int.from_bytes(bytes(a ^ b for a, b in zip(key, M_i)), byteorder='big')
+        h_int = R % MAX_HASH
+        h = h_int.to_bytes(16, byteorder='big')
 
-        if int.from_bytes(R, byteorder= 'big') < 2**(sigma + tao) and h in T:
-            M_i = T[h]
+        if R < 2**(sigma + tao) and h in T:
+            M_i = T[h].zfill(16)
 
         else:
             h = sha256_custom(M_i, tao)
             T[h] = M_i
         M += M_i
 
+    # check if the length of M is a multiple of 16
     return M
 
 
@@ -180,7 +185,7 @@ def encrypt_decrypt_image(image_path, tao, sigma, key):
     # create the AES cipher
     cipher = AES.new(key, AES.MODE_ECB)
 
-        # create the AES cipher
+    # create the AES cipher
     cipher = AES.new(key, AES.MODE_ECB)
     
     # Flatten the image data and pad it to a multiple of 16 bytes
@@ -191,14 +196,14 @@ def encrypt_decrypt_image(image_path, tao, sigma, key):
     encrypted_data = scb_encrypt(cipher, padded_data, tao, sigma, key)
 
     # Decrypt the data
-    decrypted_data = scb_decrypt(cipher, padded_data, tao, sigma, key)
+    decrypted_data = scb_decrypt(cipher, encrypted_data, tao, sigma, key)
 
     # Unpad the decrypted data
-    unpadded_data = unpad(decrypted_data, AES.block_size)
-
+    #unpadded_data = unpad(decrypted_data, AES.block_size)
+    
     # Convert decrypted data back to an array and reshape it
-    decrypted_array = np.frombuffer(unpadded_data, dtype=np.uint8)
-    decrypted_image = decrypted_array.reshape(img_data.shape)
+    decrypted_array = np.frombuffer(decrypted_data, dtype=np.uint8)
+    decrypted_image = decrypted_array[:flat_data.size].reshape(img_data.shape)
 
     # Save the decrypted image
     img_dec = Image.fromarray(decrypted_image)
@@ -224,8 +229,8 @@ def main():
     image_path = os.path.join(parent_dir, "test", "original", sys.argv[1])
     #image_path = sys.argv[1]
 
-    tao = 14
-    sigma = 2
+    tao = 13
+    sigma = 3
 
     if len(sys.argv) == 4:
         # get the key and mode

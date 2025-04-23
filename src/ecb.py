@@ -47,7 +47,7 @@ def encrypt_decrypt_image(image_path, key):
     # create the AES cipher
     cipher = AES.new(key, AES.MODE_ECB)
 
-        # create the AES cipher
+    # create the AES cipher
     cipher = AES.new(key, AES.MODE_ECB)
     
     # Flatten the image data and pad it to a multiple of 16 bytes
