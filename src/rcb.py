@@ -1,4 +1,4 @@
-# implement the secure codebook mode by Fabio Banfi that encrypts and decrypts an image
+# implement the randomised codebook mode that encrypts and decrypts an image
 # using AES-128
 
 from Cryptodome.Cipher import AES
@@ -9,7 +9,7 @@ import sys
 import hashlib
 import os
 
-# global variables - SCB look-up tables
+# global variables - RCB look-up tables
 S = {}
 T = {}
 
@@ -30,8 +30,8 @@ def sha256_custom(data, tao):
     
     return truncated_hash
 
-def scb_encrypt(cipher, data, sigma, tao, key):
-    """Encrypts data using the SCB mode.
+def rcb_encrypt(cipher, data, sigma, tao, key):
+    """Encrypts data using the RCB mode.
     Args:
         cipher (AES): The AES cipher object.
         data (bytes): The data to encrypt.
@@ -73,18 +73,22 @@ def scb_encrypt(cipher, data, sigma, tao, key):
             C_i = cipher.encrypt(M_i)
             S[h] = 0
 
-        else:
+        elif (S[h] < MAX_COUNTER):
             R = b'0' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
             # XOR each pair of bytes and build a new bytes object
             # zip(a, b) pairs up each byte from a and b
             C_i = cipher.encrypt(bytes([x ^ y for x, y in zip(R, key)]))
-            S[h] = (S[h] + 1) % MAX_COUNTER
+            S[h] = S[h] + 1
+        
+        else:
+            C_i = os.urandom(16)
+            
         C += C_i
 
     return C
 
-def scb_decrypt(cipher, data, sigma, tao, key):
-    """Decrypts data using the SCB mode.
+def rcb_decrypt(cipher, data, sigma, tao, key):
+    """Decrypts data using the RCB mode.
     Args:
         cipher (AES): The AES cipher object.
         data (bytes): The data to decrypt.
@@ -163,7 +167,7 @@ def encrypt_image(image_path, sigma, tao, key):
     padded_data = pad(flat_data.tobytes(), AES.block_size)
 
     # Encrypt the padded data
-    encrypted_data = scb_encrypt(cipher, padded_data, sigma, tao, key)
+    encrypted_data = rcb_encrypt(cipher, padded_data, sigma, tao, key)
 
     # Convert encrypted data back to an array and reshape it
     encrypted_array = np.frombuffer(encrypted_data, dtype=np.uint8)
@@ -172,11 +176,11 @@ def encrypt_image(image_path, sigma, tao, key):
     # Save the encrypted image
     img_enc = Image.fromarray(encrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_SCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_enc.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_enc.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    enc_img_path = os.path.join(parent_dir, "test", "sec", "SCB", img_name)
+    enc_img_path = os.path.join(parent_dir, "test", "sec", "RCB", img_name)
     img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, sigma, tao, key):
@@ -196,10 +200,10 @@ def encrypt_decrypt_image(image_path, sigma, tao, key):
     padded_data = pad(flat_data.tobytes(), AES.block_size)
 
     # Encrypt the padded data
-    encrypted_data = scb_encrypt(cipher, padded_data, sigma, tao, key)
+    encrypted_data = rcb_encrypt(cipher, padded_data, sigma, tao, key)
 
     # Decrypt the data
-    decrypted_data = scb_decrypt(cipher, encrypted_data, sigma, tao, key)
+    decrypted_data = rcb_decrypt(cipher, encrypted_data, sigma, tao, key)
     
     # Convert decrypted data back to an array and reshape it
     decrypted_array = np.frombuffer(decrypted_data, dtype=np.uint8)
@@ -208,17 +212,17 @@ def encrypt_decrypt_image(image_path, sigma, tao, key):
     # Save the decrypted image
     img_dec = Image.fromarray(decrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_SCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    dec_img_path = os.path.join(parent_dir, "test", "cor", "SCB", img_name)
+    dec_img_path = os.path.join(parent_dir, "test", "cor", "RCB", img_name)
     img_dec.save(dec_img_path)
 
 def main():
     # check for the correct number of arguments
     if len(sys.argv) > 6 or len(sys.argv) < 5:
-        print('Usage: python scb.py <image_path> <key> <sigma> <tao> <mode> or python scb.py <image_path> <sigma> <tao> <mode>')
+        print('Usage: python rcb.py <image_path> <key> <sigma> <tao> <mode> or python rcb.py <image_path> <sigma> <tao> <mode>')
         sys.exit(1)
 
     # get the image path
@@ -251,6 +255,6 @@ def main():
 if __name__ == '__main__':
     main()
 
-# Usage: python scb.py <image_path> <key> <sigma> <tao> <mode> or python scb.py <image_path> <sigma> <tao> <mode>
-# Example: python scb.py image.png key 2 2 enc or python scb.py image.png 2 2 enc
-# Example: python scb.py encrypted_image.png key 2 2 encdec or python scb.py encrypted_image.png 2 2 encdec
+# Usage: python rcb.py <image_path> <key> <sigma> <tao> <mode> or python rcb.py <image_path> <sigma> <tao> <mode>
+# Example: python rcb.py image.png key 2 2 enc or python rcb.py image.png 2 2 enc
+# Example: python rcb.py encrypted_image.png key 2 2 encdec or python rcb.py encrypted_image.png 2 2 encdec
