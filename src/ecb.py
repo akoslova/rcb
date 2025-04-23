@@ -6,6 +6,7 @@ from Cryptodome.Util.Padding import pad, unpad
 from PIL import Image
 import numpy as np
 import sys
+import os
 
 def encrypt_image(image_path, key):
     # open the image
@@ -29,8 +30,14 @@ def encrypt_image(image_path, key):
 
     # Save the encrypted image
     img_enc = Image.fromarray(encrypted_image)
-    img_name = image_path.split('.')[0] + '_ECB_encrypted.png'
-    img_enc.save(img_name)
+
+    img_name = image_path.split('.')[-2] + '_ECB_encrypted.png'
+
+    save_folder = os.path.join("test", "sec")
+    enc_img_path = os.path.join(save_folder, img_name)
+    print(enc_img_path)
+    #img_name = image_path.split('.')[0] + '_ECB_encrypted.png'
+    img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, key):
     # open the image
@@ -75,7 +82,10 @@ def main():
         sys.exit(1)
 
     # get the image path
-    image_path = sys.argv[1]
+    current_dir = os.path.dirname(__file__)
+    parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
+    image_path = os.path.join(parent_dir, "test", "original", sys.argv[1])
+    #image_path = sys.argv[1]
 
     if len(sys.argv) == 4:
         # get the key and mode
