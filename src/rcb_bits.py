@@ -21,12 +21,17 @@ def sha256_custom(data, tao):
     Returns:
         str: The truncated hash as a hexadecimal string - 16 bytes.
     """
+    # convert data from binary string to bytes
+    data_bytes = int(data, 2).to_bytes(len(data) // 8, byteorder='big')
     
     # sha256: input any size, output 256 bits
     # .digest provides raw bytes
-    full_hash = hashlib.sha256(data).digest()  
+    full_hash = hashlib.sha256(data_bytes).digest()  
 
-    truncated_hash = full_hash[:tao]  # truncate to tao bits
+    # converet the full_hash into a binary string
+    full_hash_bits = ''.join(format(byte, '08b') for byte in full_hash)
+
+    truncated_hash = full_hash_bits[:tao]  # truncate to tao bits
     
     return truncated_hash
 
@@ -41,47 +46,61 @@ def rcb_encrypt(cipher, data, sigma, tao, key):
     Returns:
         C (str): The encrypted data in bytes.
     """
-    # check if sigma is between 1 and 16
-    if sigma > 16 or sigma <= 0:
-        raise ValueError("sigma must be between 1 and 16")
+    # check if sigma is between 1 and 128
+    if sigma > 128 or sigma <= 0:
+        raise ValueError("sigma must be between 1 and 128")
     
-    # allow only tao between 1 and 16
-    if tao > 16 or tao <= 0:
-        raise ValueError("tao must be between 1 and 16")
+    # allow only tao between 1 and 128
+    if tao > 128 or tao <= 0:
+        raise ValueError("tao must be between 1 and 128")
 
     # check that the sum of tao and sigma is less than 16
-    if (tao + sigma) > 16:
-        raise ValueError("tao + sigma must be less than 16")
+    if (tao + sigma) > 128:
+        raise ValueError("tao + sigma must be less than 128")
 
     # check if the key is 16 bytes
     if len(key) != 16:
         raise ValueError("Key must be 16 bytes (128 bits)")
     
-    # cipher bytes
-    C = b''
+    # convert key to binary string
+    key_bits = ''.join(format(byte, '08b') for byte in key)
+
+    # cipher binary string
+    C = ''
 
     # maximum counter value
-    MAX_COUNTER = 2 ** (8 * sigma)
+    MAX_COUNTER = 2 ** sigma
+
+    # convert data from bytes to binary string
+    data_bits = ''.join(format(byte, '08b') for byte in data)
 
     # loop over every 16 bits of the data
-    for i in range(0, len(data), 16):
+    for i in range(0, len(data_bits), 128):
 
-        M_i = data[i:i+16]
+        M_i = data_bits[i:i+128]
         h = sha256_custom(M_i, tao)
 
         if h not in S:
-            C_i = cipher.encrypt(M_i)
+            # convert M_i to bytes
+            M_i_bytes = int(M_i, 2).to_bytes(16, byteorder='big')
+            C_i_bytes = cipher.encrypt(M_i_bytes)
+            # convert C_i to binary string
+            C_i = ''.join(format(byte, '08b') for byte in C_i_bytes)
             S[h] = 0
 
         elif (S[h] < MAX_COUNTER):
-            R = b'0' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
-            # XOR each pair of bytes and build a new bytes object
-            # zip(a, b) pairs up each byte from a and b
-            C_i = cipher.encrypt(bytes([x ^ y for x, y in zip(R, key)]))
+            R = '0' * (128 - sigma - tao) + bin(S[h]) + h
+            # XOR the bits between R and key
+            R_key_XORed = int(R, 2) ^ int(key_bits, 2)
+            C_i_bytes = cipher.encrypt(R_key_XORed.to_bytes(16, byteorder='big'))
+            # convert C_i to binary string
+            C_i = ''.join(format(byte, '08b') for byte in C_i_bytes)
             S[h] = S[h] + 1
         
         else:
-            C_i = os.urandom(16)
+            C_i_bytes = os.urandom(16)
+            # convert C_i to binary string
+            C_i = ''.join(format(byte, '08b') for byte in C_i_bytes)
             
         C += C_i
 
@@ -176,11 +195,11 @@ def encrypt_image(image_path, sigma, tao, key):
     # Save the encrypted image
     img_enc = Image.fromarray(encrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_enc.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_bit_sigma_' + str(sigma) + '_tao_' + str(tao) + '_enc.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    enc_img_path = os.path.join(parent_dir, "test", "sec", "RCB", img_name)
+    enc_img_path = os.path.join(parent_dir, "test", "bits", "RCB", img_name)
     img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, sigma, tao, key):
