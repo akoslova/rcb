@@ -14,6 +14,9 @@ def compare(image_path_1, image_path_2):
     img_1 = img_1.convert('RGB')
     img_data_1 = np.array(img_1)
 
+    # count differences
+    differences = 0
+
     # open the image 1
     img_2 = Image.open(image_path_2)
     img_2 = img_2.convert('RGB')
@@ -29,7 +32,11 @@ def compare(image_path_1, image_path_2):
     # compare flat data 1 and 2 and if there is a difference, put a 1 in the result flat data
     for i in range(flat_data_1.size):
         if flat_data_1[i] != flat_data_2[i]:
+            differences += 1
             flat_data_res[i] = 255
+
+    # print the number of differences
+    print(f"Number of differences: {differences}")
 
     # Convert decrypted data back to an array and reshape it
     compared_image = flat_data_res.reshape(img_data_1.shape)
@@ -64,3 +71,4 @@ if __name__ == '__main__':
 
 # Usage: python compare.py <image_path_1> <image_path_2> 
 # Example: python compare.py image1.png image2.png
+# Example: python compare.py RCB/Tux_RCB_sigma_2_tao_2_encdec.png SCB/Tux_SCB_sigma_2_tao_2_encdec.png

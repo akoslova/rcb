@@ -9,6 +9,10 @@ probability if the parameter tao and sigma necessary for the mode are chosen wit
 
 ## Code
 ### How to run the Code
+Now that we have the requirements file, you can see that it consists of a long list of different packages.
+
+To work with the packages, you have to install them. You can do this by using the command prompt or terminal.
+pip install -r requirements.txt
 
 ## Notice
 Do something similar like Banfi
