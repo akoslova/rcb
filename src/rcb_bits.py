@@ -89,7 +89,7 @@ def rcb_encrypt(cipher, data, sigma, tao, key):
             S[h] = 0
 
         elif (S[h] < MAX_COUNTER):
-            R = '0' * (128 - sigma - tao) + bin(S[h]) + h
+            R = '0' * (128 - sigma - tao) + format(S[h], 'b') + h
             # XOR the bits between R and key
             R_key_XORed = int(R, 2) ^ int(key_bits, 2)
             C_i_bytes = cipher.encrypt(R_key_XORed.to_bytes(16, byteorder='big'))
@@ -118,89 +118,64 @@ def rcb_decrypt(cipher, data, sigma, tao, key):
         M (str): The decrypted data in bytes.
     """
     # check if sigma is between 1 and 16
-    if sigma > 16 or sigma <= 0:
-        raise ValueError("sigma must be between 1 and 16")
+    if sigma > 128 or sigma <= 0:
+        raise ValueError("sigma must be between 1 and 128")
     
     # allow only tao between 1 and 16
-    if tao > 16 or tao <= 0:
-        raise ValueError("tao must be between 1 and 16")
+    if tao > 128 or tao <= 0:
+        raise ValueError("tao must be between 1 and 128")
 
     # check that the sum of tao and sigma is less than 16
-    if (tao + sigma) > 16:
-        raise ValueError("tao + sigma must be less than 16")
+    if (tao + sigma) > 128:
+        raise ValueError("tao + sigma must be less than 128")
 
     # check if the key is 16 bytes
     if len(key) != 16:
         raise ValueError("Key must be 16 bytes (128 bits)")
     
     # cipher bytes
-    M = b''
+    M = ''
 
     # max hash
-    MAX_HASH = 2 ** (8 * tao)
+    MAX_HASH = 2 ** (tao)
 
     # max counter
-    MAX_COUNTER = 2 ** (8 * sigma)
+    MAX_COUNTER = 2 ** (sigma)
 
     # threshold for R
     threshold = 2**(MAX_HASH + MAX_COUNTER)
 
-    # loop over every 16 bits of the data
-    for i in range(0, len(data), 16):
+    # convert key to binary string
+    key_bits = ''.join(format(byte, '08b') for byte in key)
 
-        # C_i 16 bytes
-        C_i = data[i:i+16]
-        # M_i 16 bytes
+    # convert data from bytes to binary string
+    # data_bits = ''.join(format(byte, '08b') for byte in data)
+    data_bits = data
+
+    # loop over every 16 bits of the data
+    for i in range(0, len(data_bits), 128):
+
+        # C_i 128 bits
+        C_i = data_bits[i:i+128]
+        # M_i 128 bits
         M_i = cipher.decrypt(C_i)
         # XOR key with M_i and convert to an int
-        R = int.from_bytes(bytes(a ^ b for a, b in zip(key, M_i)), byteorder='big')
+        R = key_bits ^ M_i
         h_int = R % MAX_HASH
-        h = h_int.to_bytes(tao, byteorder='big')
+        h = bin(h_int)
 
         if R < threshold and h in T:
-            M_i = T[h].zfill(16)
+            M_i = T[h].zfill(128)
 
         else:
             h = sha256_custom(M_i, tao)
             T[h] = M_i
         M += M_i
 
+    # convert M to bytes
+    M = int(M, 2).to_bytes(len(M) // 8, byteorder='big')
     # check if the length of M is a multiple of 16
     return M
-
-
-def encrypt_image(image_path, sigma, tao, key):
-    # open the image
-    img = Image.open(image_path)
-    img = img.convert('RGB')
-    # create an array with rgb values (integers between 0 and 255): one pixel is [R,G,B]
-    img_data = np.array(img)
-
-    # create the AES cipher
-    cipher = AES.new(key, AES.MODE_ECB)
-
-    # converts the many [R,G,B] arrays from img_data into one 1D arry [R,G,B,R,G,B,...]
-    flat_data = img_data.flatten()
-    # the 1D array is converted to bytes and ensures that the length is a multiple of 16 bytes 
-    # for it to be AES compatible
-    padded_data = pad(flat_data.tobytes(), AES.block_size)
-
-    # Encrypt the padded data
-    encrypted_data = rcb_encrypt(cipher, padded_data, sigma, tao, key)
-
-    # Convert encrypted data back to an array and reshape it
-    encrypted_array = np.frombuffer(encrypted_data, dtype=np.uint8)
-    encrypted_image = encrypted_array[:flat_data.size].reshape(img_data.shape)
-
-    # Save the encrypted image
-    img_enc = Image.fromarray(encrypted_image)
-
-    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_bit_sigma_' + str(sigma) + '_tao_' + str(tao) + '_enc.png'
-
-    current_dir = os.path.dirname(__file__)
-    parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    enc_img_path = os.path.join(parent_dir, "test", "bits", "RCB", img_name)
-    img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, sigma, tao, key):
     # open the image
@@ -231,11 +206,11 @@ def encrypt_decrypt_image(image_path, sigma, tao, key):
     # Save the decrypted image
     img_dec = Image.fromarray(decrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_bits_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    dec_img_path = os.path.join(parent_dir, "test", "cor", "RCB", img_name)
+    dec_img_path = os.path.join(parent_dir, "test", "bits", img_name)
     img_dec.save(dec_img_path)
 
 def main():
@@ -262,10 +237,8 @@ def main():
         tao = int(sys.argv[3])
         mode = sys.argv[4]
 
-    # encrypt or decrypt the image
-        if mode == 'enc':
-            encrypt_image(image_path, sigma, tao, key)
-        elif mode == 'encdec':
+    # encrypt and decrypt the image
+        if mode == 'encdec':
             encrypt_decrypt_image(image_path, sigma, tao, key)
         else:
             print('Invalid mode')
@@ -274,6 +247,5 @@ def main():
 if __name__ == '__main__':
     main()
 
-# Usage: python rcb.py <image_path> <key> <sigma> <tao> <mode> or python rcb.py <image_path> <sigma> <tao> <mode>
-# Example: python rcb.py image.png key 2 2 enc or python rcb.py image.png 2 2 enc
-# Example: python rcb.py encrypted_image.png key 2 2 encdec or python rcb.py encrypted_image.png 2 2 encdec
+# Usage: python rcb_bits.py <image_path> <key> <sigma> <tao> <mode> or python rcb_bits.py <image_path> <sigma> <tao> <mode>
+# Example: python rcb_bits.py encrypted_image.png key 2 2 encdec or python rcb_bits.py encrypted_image.png 2 2 encdec
