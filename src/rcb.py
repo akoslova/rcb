@@ -74,7 +74,7 @@ def rcb_encrypt(cipher, data, sigma, tao, key):
             S[h] = 0
 
         elif (S[h] < MAX_COUNTER):
-            R = b'0' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
+            R = b'\x00' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
             # XOR each pair of bytes and build a new bytes object
             # zip(a, b) pairs up each byte from a and b
             C_i = cipher.encrypt(bytes([x ^ y for x, y in zip(R, key)]))
@@ -124,7 +124,7 @@ def rcb_decrypt(cipher, data, sigma, tao, key):
     MAX_COUNTER = 2 ** (8 * sigma)
 
     # threshold for R
-    threshold = 2**(MAX_HASH + MAX_COUNTER)
+    threshold = 2**(tao*8 + sigma*8)
 
     # loop over every 16 bits of the data
     for i in range(0, len(data), 16):
@@ -139,7 +139,7 @@ def rcb_decrypt(cipher, data, sigma, tao, key):
         h = h_int.to_bytes(tao, byteorder='big')
 
         if R < threshold and h in T:
-            M_i = T[h].zfill(16)
+            M_i = T[h]
 
         else:
             h = sha256_custom(M_i, tao)

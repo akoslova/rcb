@@ -16,10 +16,10 @@ T = {}
 def sha256_custom(data, tao):
     """Computes a SHA-256 hash and truncates it to tao bits.
     Args:
-        data (str): The input data to hash - 16 bytes.
+        data (str): The input data to hash - 128 bits.
         tao (int): The number of bits to truncate the hash to - between 1 and 128.
     Returns:
-        str: The truncated hash as a hexadecimal string - 16 bytes.
+        str: The truncated hash as a hexadecimal string - 128 bits.
     """
     # convert data from binary string to bytes
     data_bytes = int(data, 2).to_bytes(len(data) // 8, byteorder='big')
@@ -89,7 +89,7 @@ def rcb_encrypt(cipher, data, sigma, tao, key):
             S[h] = 0
 
         elif (S[h] < MAX_COUNTER):
-            R = '0' * (128 - sigma - tao) + format(S[h], 'b') + h
+            R = '0' * (128 - sigma - tao) + bin(S[h])[2:] + h
             # XOR the bits between R and key
             R_key_XORed = int(R, 2) ^ int(key_bits, 2)
             C_i_bytes = cipher.encrypt(R_key_XORed.to_bytes(16, byteorder='big'))
@@ -143,29 +143,29 @@ def rcb_decrypt(cipher, data, sigma, tao, key):
     MAX_COUNTER = 2 ** (sigma)
 
     # threshold for R
-    threshold = 2**(MAX_HASH + MAX_COUNTER)
+    threshold = 2**(tao + sigma)
 
     # convert key to binary string
     key_bits = ''.join(format(byte, '08b') for byte in key)
 
-    # convert data from bytes to binary string
-    # data_bits = ''.join(format(byte, '08b') for byte in data)
-    data_bits = data
-
     # loop over every 16 bits of the data
-    for i in range(0, len(data_bits), 128):
+    for i in range(0, len(data), 128):
 
         # C_i 128 bits
-        C_i = data_bits[i:i+128]
+        C_i = data[i:i+128]
+        # convert C_i to bytes
+        C_i_bytes = int(C_i, 2).to_bytes(16, byteorder='big')
         # M_i 128 bits
-        M_i = cipher.decrypt(C_i)
+        M_i_bytes = cipher.decrypt(C_i_bytes)
+        # convert M_i to binary string
+        M_i = ''.join(format(byte, '08b') for byte in M_i_bytes)
         # XOR key with M_i and convert to an int
-        R = key_bits ^ M_i
+        R = int(key_bits, 2) ^ int(M_i, 2)
         h_int = R % MAX_HASH
-        h = bin(h_int)
+        h = bin(h_int)[2:].zfill(tao)  # convert to binary string
 
         if R < threshold and h in T:
-            M_i = T[h].zfill(128)
+            M_i = T[h]
 
         else:
             h = sha256_custom(M_i, tao)
@@ -206,7 +206,7 @@ def encrypt_decrypt_image(image_path, sigma, tao, key):
     # Save the decrypted image
     img_dec = Image.fromarray(decrypted_image)
 
-    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_bits_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
+    img_name = image_path.split('/')[-1].split('.')[0] + '_RCB_cor_bits_sigma_' + str(sigma) + '_tao_' + str(tao) + '_encdec.png'
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -215,8 +215,8 @@ def encrypt_decrypt_image(image_path, sigma, tao, key):
 
 def main():
     # check for the correct number of arguments
-    if len(sys.argv) > 6 or len(sys.argv) < 5:
-        print('Usage: python rcb.py <image_path> <key> <sigma> <tao> <mode> or python rcb.py <image_path> <sigma> <tao> <mode>')
+    if len(sys.argv) > 5 or len(sys.argv) < 4:
+        print('Usage: python rcb.py <image_path> <key> <sigma> <tao> or python rcb.py <image_path> <sigma> <tao>')
         sys.exit(1)
 
     # get the image path
@@ -229,23 +229,17 @@ def main():
         key = sys.argv[2].encode()
         sigma = int(sys.argv[3])
         tao = int(sys.argv[4])
-        mode = sys.argv[5]
     else:
         key_str = "MySecretKey12345"  # 16 characters
         key = key_str.encode('utf-8')  # Now it's a 16-byte key
         sigma = int(sys.argv[2])
         tao = int(sys.argv[3])
-        mode = sys.argv[4]
 
     # encrypt and decrypt the image
-        if mode == 'encdec':
-            encrypt_decrypt_image(image_path, sigma, tao, key)
-        else:
-            print('Invalid mode')
-            sys.exit(1)
+    encrypt_decrypt_image(image_path, sigma, tao, key)
 
 if __name__ == '__main__':
     main()
 
-# Usage: python rcb_bits.py <image_path> <key> <sigma> <tao> <mode> or python rcb_bits.py <image_path> <sigma> <tao> <mode>
-# Example: python rcb_bits.py encrypted_image.png key 2 2 encdec or python rcb_bits.py encrypted_image.png 2 2 encdec
+# Usage: python rcb_cor_bits.py <image_path> <key> <sigma> <tao> <mode> or python rcb_cor_bits.py <image_path> <sigma> <tao> <mode>
+# Example: python rcb_cor_bits.py encrypted_image.png key 2 2 encdec or python rcb_cor_bits.py encrypted_image.png 2 2 encdec

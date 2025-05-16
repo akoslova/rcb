@@ -74,7 +74,8 @@ def scb_encrypt(cipher, data, sigma, tao, key):
             S[h] = 0
 
         else:
-            R = b'0' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
+            R = b'\x00' * (16 - sigma - tao) + S[h].to_bytes(sigma, 'big') + h
+    
             # XOR each pair of bytes and build a new bytes object
             # zip(a, b) pairs up each byte from a and b
             C_i = cipher.encrypt(bytes([x ^ y for x, y in zip(R, key)]))
@@ -120,7 +121,7 @@ def scb_decrypt(cipher, data, sigma, tao, key):
     MAX_COUNTER = 2 ** (8 * sigma)
 
     # threshold for R
-    threshold = 2**(MAX_HASH + MAX_COUNTER)
+    threshold = 2**(tao*8 + sigma*8)
 
     # loop over every 16 bits of the data
     for i in range(0, len(data), 16):
@@ -130,12 +131,13 @@ def scb_decrypt(cipher, data, sigma, tao, key):
         # M_i 16 bytes
         M_i = cipher.decrypt(C_i)
         # XOR key with M_i and convert to an int
-        R = int.from_bytes(bytes(a ^ b for a, b in zip(key, M_i)), byteorder='big')
+        bytes_xor = bytes(a ^ b for a, b in zip(key, M_i))
+        R = int.from_bytes(bytes_xor, byteorder='big')
         h_int = R % MAX_HASH
         h = h_int.to_bytes(tao, byteorder='big')
 
         if R < threshold and h in T:
-            M_i = T[h].zfill(16)
+            M_i = T[h]
 
         else:
             h = sha256_custom(M_i, tao)
