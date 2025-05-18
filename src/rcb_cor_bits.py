@@ -178,6 +178,15 @@ def rcb_decrypt(cipher, data, sigma, tao, key):
     return M
 
 def encrypt_decrypt_image(image_path, sigma, tao, key):
+    """
+    Encrypts and then decrypts an image using AES-128 in RCB mode
+    and saves the image in /test/bits.
+    Args:
+        image_path (str): The path to the image.
+        sigma (int): The number of bits to use for the counter.
+        tao (int): The number of bits to truncate the hash to.
+        key (bytes): The encryption key (must be 16 bytes).
+    """
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')

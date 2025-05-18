@@ -9,15 +9,22 @@ import sys
 import os
 
 def compare(image_path_1, image_path_2):
+    """
+    Compares two images and saves the differences in a new image in /test/compare. 
+    Also prints out the number of differences.
+    Args:
+        image_path_1 (str): The path to the first image.
+        image_path_2 (str): The path to the second image.
+    """
+    # count differences
+    differences = 0
+    
     # open the image 1
     img_1 = Image.open(image_path_1)
     img_1 = img_1.convert('RGB')
     img_data_1 = np.array(img_1)
 
-    # count differences
-    differences = 0
-
-    # open the image 1
+    # open the image 2
     img_2 = Image.open(image_path_2)
     img_2 = img_2.convert('RGB')
     img_data_2 = np.array(img_2)

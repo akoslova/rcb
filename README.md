@@ -15,4 +15,6 @@ To work with the packages, you have to install them. You can do this by using th
 pip install -r requirements.txt
 
 ## Notice
-Do something similar like Banfi
+The code is provided without any warranty and has not been written with efficiency in mind.
+
+Important: Currently, scb.c uses the input key as both the block cipher key $K_1$ and the pad key $K_2$. This clearly should be avoided.

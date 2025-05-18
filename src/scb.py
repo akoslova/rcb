@@ -149,6 +149,15 @@ def scb_decrypt(cipher, data, sigma, tao, key):
 
 
 def encrypt_image(image_path, sigma, tao, key):
+    """
+    Encrypts an image using the SCB mode 
+    and saves the image in /test/sec/SCB.
+    Args:
+        image_path (str): The path to the image.
+        sigma (int): The number of bits to use for the counter.
+        tao (int): The number of bits to truncate the hash to.
+        key (bytes): The encryption key.
+    """
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')
@@ -182,6 +191,15 @@ def encrypt_image(image_path, sigma, tao, key):
     img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, sigma, tao, key):
+    """
+    Encrypts and then decrypts an image using the SCB mode
+    and saves the image in /test/cor/SCB.
+    Args:
+        image_path (str): The path to the image.
+        sigma (int): The number of bits to use for the counter.
+        tao (int): The number of bits to truncate the hash to.
+        key (bytes): The encryption key.
+    """
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')

@@ -9,6 +9,13 @@ import sys
 import os
 
 def encrypt_image(image_path, key):
+    """
+    Encrypts an image using AES-128 in ECB mode 
+    and saves the image in /test/sec/ECB.
+    Args:
+        image_path (str): The path to the image.
+        key (bytes): The encryption key (must be 16 bytes).
+    """
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')
@@ -39,6 +46,13 @@ def encrypt_image(image_path, key):
     img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, key):
+    """
+    Encrypts and then decrypts an image using AES-128 in ECB mode
+    and saves the image in /test/cor/ECB.
+    Args:
+        image_path (str): The path to the image.
+        key (bytes): The encryption key (must be 16 bytes).
+    """
     # open the image
     img = Image.open(image_path)
     img = img.convert('RGB')
