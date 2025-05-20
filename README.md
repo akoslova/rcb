@@ -41,6 +41,12 @@ The options for input are explained below:
 
 The img folder is the place where the original images are stored and the produced images are saved to. 
 
+## Tests Folder
+
+The tests folder contains several tests written for the scripts. To run the tests, use the command:
+
+<pre> pytest tests/ </pre>
+
 ## Notice
 The code is provided without any warranty and has not been written with efficiency in mind.
 
