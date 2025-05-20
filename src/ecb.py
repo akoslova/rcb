@@ -11,7 +11,7 @@ import os
 def encrypt_image(image_path, key):
     """
     Encrypts an image using AES-128 in ECB mode 
-    and saves the image in /test/sec/ECB.
+    and saves the image in /img/sec/ECB.
     Args:
         image_path (str): The path to the image.
         key (bytes): The encryption key (must be 16 bytes).
@@ -42,13 +42,13 @@ def encrypt_image(image_path, key):
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    enc_img_path = os.path.join(parent_dir, "test", "sec", "ECB", img_name)
+    enc_img_path = os.path.join(parent_dir, "img", "sec", "ECB", img_name)
     img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, key):
     """
     Encrypts and then decrypts an image using AES-128 in ECB mode
-    and saves the image in /test/cor/ECB.
+    and saves the image in /img/cor/ECB.
     Args:
         image_path (str): The path to the image.
         key (bytes): The encryption key (must be 16 bytes).
@@ -85,7 +85,7 @@ def encrypt_decrypt_image(image_path, key):
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    dec_img_path = os.path.join(parent_dir, "test", "cor", "ECB", img_name)
+    dec_img_path = os.path.join(parent_dir, "img", "cor", "ECB", img_name)
     img_dec.save(dec_img_path)
 
 
@@ -98,7 +98,7 @@ def main():
     # get the image path
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    image_path = os.path.join(parent_dir, "test", "original", sys.argv[1])
+    image_path = os.path.join(parent_dir, "img", "original", sys.argv[1])
     #image_path = sys.argv[1]
 
     if len(sys.argv) == 4:

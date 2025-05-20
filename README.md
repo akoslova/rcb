@@ -37,9 +37,9 @@ The options for input are explained below:
 | &lt;tao&gt; | For the scrips scb.py and rcb.py, $\tau$ is divided by 8, and must be an integer between 1 and 16. For rcb_cor_bits.py, $\tau$ can be an integer between 1 and 128. |
 | &lt;key&gt; | Optional input. Needs to be encoded to a 16 byte key. |
 
-## Test Folder
+## Img Folder
 
-The test folder does not contain tests as the name indicates but instead, this is where the produced images are saved to. Thus, we are 'testing' the modes of operation on different input. Maybe the name 'images' would have been more intuitiv.
+The img folder is the place where the original images are stored and the produced images are saved to. 
 
 ## Notice
 The code is provided without any warranty and has not been written with efficiency in mind.

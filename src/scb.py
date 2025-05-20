@@ -151,7 +151,7 @@ def scb_decrypt(cipher, data, sigma, tao, key):
 def encrypt_image(image_path, sigma, tao, key):
     """
     Encrypts an image using the SCB mode 
-    and saves the image in /test/sec/SCB.
+    and saves the image in /img/sec/SCB.
     Args:
         image_path (str): The path to the image.
         sigma (int): The number of bits to use for the counter.
@@ -187,13 +187,13 @@ def encrypt_image(image_path, sigma, tao, key):
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    enc_img_path = os.path.join(parent_dir, "test", "sec", "SCB", img_name)
+    enc_img_path = os.path.join(parent_dir, "img", "sec", "SCB", img_name)
     img_enc.save(enc_img_path)
 
 def encrypt_decrypt_image(image_path, sigma, tao, key):
     """
     Encrypts and then decrypts an image using the SCB mode
-    and saves the image in /test/cor/SCB.
+    and saves the image in /img/cor/SCB.
     Args:
         image_path (str): The path to the image.
         sigma (int): The number of bits to use for the counter.
@@ -232,7 +232,7 @@ def encrypt_decrypt_image(image_path, sigma, tao, key):
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    dec_img_path = os.path.join(parent_dir, "test", "cor", "SCB", img_name)
+    dec_img_path = os.path.join(parent_dir, "img", "cor", "SCB", img_name)
     img_dec.save(dec_img_path)
 
 def main():
@@ -244,7 +244,7 @@ def main():
     # get the image path
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    image_path = os.path.join(parent_dir, "test", "original", sys.argv[1])
+    image_path = os.path.join(parent_dir, "img", "original", sys.argv[1])
 
     if len(sys.argv) == 6:
         # get the key and mode

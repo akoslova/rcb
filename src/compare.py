@@ -10,7 +10,7 @@ import os
 
 def compare(image_path_1, image_path_2):
     """
-    Compares two images and saves the differences in a new image in /test/compare. 
+    Compares two images and saves the differences in a new image in /img/compare. 
     Also prints out the number of differences.
     Args:
         image_path_1 (str): The path to the first image.
@@ -55,7 +55,7 @@ def compare(image_path_1, image_path_2):
 
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    img_path_compare = os.path.join(parent_dir, "test", "compare", img_name)
+    img_path_compare = os.path.join(parent_dir, "img", "compare", img_name)
     img_compare.save(img_path_compare)
 
 
@@ -68,8 +68,8 @@ def main():
     # get the image path
     current_dir = os.path.dirname(__file__)
     parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-    image_path_1 = os.path.join(parent_dir, "test", "cor", sys.argv[1])
-    image_path_2 = os.path.join(parent_dir, "test", "cor", sys.argv[2])
+    image_path_1 = os.path.join(parent_dir, "img", "cor", sys.argv[1])
+    image_path_2 = os.path.join(parent_dir, "img", "cor", sys.argv[2])
 
     compare(image_path_1, image_path_2)
 
