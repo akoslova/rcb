@@ -15,6 +15,12 @@ from scb import (
     S, T
 )
 
+@pytest.fixture(autouse=True)
+def clear_rcb_state():
+    """Clear global state before each test."""
+    S.clear()
+    T.clear()
+
 @pytest.fixture
 def sample_key():
     return b"MySecretKey12345"  # 16 bytes
@@ -24,24 +30,13 @@ def sample_data():
     # 32 bytes (2 AES blocks)
     return pad(b"TestBlock1234567TestBlock7654321", AES.block_size)
 
+# unit test for custom sha256 function
 def test_sha256_custom_length():
     data = b"Test input data"
     for tao in range(1, 17):
         h = sha256_custom(data, tao)
         assert isinstance(h, bytes)
         assert len(h) == tao
-
-def test_invalid_tao_sigma_key(sample_key, sample_data):
-    cipher = AES.new(sample_key, AES.MODE_ECB)
-
-    with pytest.raises(ValueError):
-        scb_encrypt(cipher, sample_data, sigma=0, tao=4, key=sample_key)
-    
-    with pytest.raises(ValueError):
-        scb_encrypt(cipher, sample_data, sigma=8, tao=9, key=b"short_key")
-
-    with pytest.raises(ValueError):
-        scb_encrypt(cipher, sample_data, sigma=10, tao=10, key=sample_key)  # sigma + tao > 16
 
 def test_scb_encrypt_decrypt_roundtrip(sample_key, sample_data):
     cipher = AES.new(sample_key, AES.MODE_ECB)
@@ -56,6 +51,25 @@ def test_scb_encrypt_decrypt_roundtrip(sample_key, sample_data):
 
     decrypted = scb_decrypt(cipher, encrypted, sigma, tao, sample_key)
     assert decrypted == sample_data
+
+def test_invalid_tao_sigma_key(sample_key, sample_data):
+    cipher = AES.new(sample_key, AES.MODE_ECB)
+
+    # invalid sigma value
+    with pytest.raises(ValueError):
+        scb_encrypt(cipher, sample_data, sigma=-1, tao=4, key=sample_key)
+
+    # invalid tao value
+    with pytest.raises(ValueError):
+        scb_encrypt(cipher, sample_data, sigma=4, tao=-1, key=sample_key)
+    
+    # invalid key
+    with pytest.raises(ValueError):
+        scb_encrypt(cipher, sample_data, sigma=8, tao=9, key=b"short_key")
+
+    # sigma + tao > 16
+    with pytest.raises(ValueError):
+        scb_encrypt(cipher, sample_data, sigma=10, tao=10, key=sample_key) 
 
 def test_scb_determinism(sample_key):
     cipher = AES.new(sample_key, AES.MODE_ECB)

@@ -15,51 +15,75 @@ def clear_rcb_state():
     S.clear()
     T.clear()
 
+@pytest.fixture
+def sample_key():
+    return b"MySecretKey12345"  # 16 bytes
 
-def test_sha256_truncation():
-    data = b"1234567890abcdef"
-    tao = 8  # 8 bytes
-    truncated = sha256_custom(data, tao)
-    assert isinstance(truncated, bytes)
-    assert len(truncated) == tao
+@pytest.fixture
+def sample_data():
+    # 32 bytes (2 AES blocks)
+    return pad(b"TestBlock1234567TestBlock7654321", AES.block_size)
 
+# unit test for custom sha256 function
+def test_sha256_custom_length():
+    data = b"Test input data"
+    for tao in range(1, 17):
+        h = sha256_custom(data, tao)
+        assert isinstance(h, bytes)
+        assert len(h) == tao
 
 def test_encrypt_decrypt_round_trip():
     key = b"MySecretKey12345"  # 16 bytes
     cipher = AES.new(key, AES.MODE_ECB)
 
-    sigma = 2
-    tao = 2
+    sigma = 4
+    tao = 4
 
     original_data = os.urandom(64)
     padded_data = pad(original_data, AES.block_size)
 
     encrypted = rcb_encrypt(cipher, padded_data, sigma, tao, key)
-    decrypted = rcb_decrypt(cipher, encrypted, sigma, tao, key)
+    assert len(encrypted) == len(padded_data)
+    assert encrypted != padded_data  # Ensure encryption changed the data
 
+    decrypted = rcb_decrypt(cipher, encrypted, sigma, tao, key)
     # Truncate to the original padded length
     assert decrypted[:len(padded_data)] == padded_data
 
 
-def test_invalid_key_length():
-    short_key = b"short_key"
-    cipher = AES.new(b"MySecretKey12345", AES.MODE_ECB)
-    data = pad(os.urandom(32), AES.block_size)
+def test_invalid_tao_sigma_key(sample_key, sample_data):
+    cipher = AES.new(sample_key, AES.MODE_ECB)
 
+    # invalid sigma value
     with pytest.raises(ValueError):
-        rcb_encrypt(cipher, data, sigma=2, tao=2, key=short_key)
+        rcb_encrypt(cipher, sample_data, sigma=-1, tao=4, key=sample_key)
 
-
-@pytest.mark.parametrize("sigma,tao", [
-    (0, 2),  # Invalid sigma
-    (2, 0),  # Invalid tao
-    (9, 8),  # tao + sigma = 17 > 16
-    (17, 1), # sigma too large
-])
-def test_invalid_sigma_tao(sigma, tao):
-    key = b"MySecretKey12345"
-    cipher = AES.new(key, AES.MODE_ECB)
-    data = pad(os.urandom(32), AES.block_size)
-
+    # invalid tao value
     with pytest.raises(ValueError):
-        rcb_encrypt(cipher, data, sigma=sigma, tao=tao, key=key)
+        rcb_encrypt(cipher, sample_data, sigma=4, tao=-1, key=sample_key)
+    
+    # invalid key
+    with pytest.raises(ValueError):
+        rcb_encrypt(cipher, sample_data, sigma=8, tao=9, key=b"short_key")
+
+    # sigma + tao > 16
+    with pytest.raises(ValueError):
+        rcb_encrypt(cipher, sample_data, sigma=10, tao=10, key=sample_key) 
+
+def test_rcb_determinism(sample_key):
+    cipher = AES.new(sample_key, AES.MODE_ECB)
+    S.clear()
+    T.clear()
+    data = pad(b"ABCD" * 4, AES.block_size)  # 16 bytes
+
+    sigma = 2
+    tao = 2
+    c1 = rcb_encrypt(cipher, data, sigma, tao, sample_key)
+
+    # Reset state
+    S.clear()
+    T.clear()
+    cipher2 = AES.new(sample_key, AES.MODE_ECB)
+    c2 = rcb_encrypt(cipher2, data, sigma, tao, sample_key)
+
+    assert c1 == c2

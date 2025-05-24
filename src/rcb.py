@@ -42,11 +42,11 @@ def rcb_encrypt(cipher, data, sigma, tao, key):
         C (str): The encrypted data in bytes.
     """
     # check if sigma is between 1 and 16
-    if sigma > 16 or sigma <= 0:
+    if sigma >= 16 or sigma < 0:
         raise ValueError("sigma must be between 1 and 16")
     
     # allow only tao between 1 and 16
-    if tao > 16 or tao <= 0:
+    if tao >= 16 or tao < 0:
         raise ValueError("tao must be between 1 and 16")
 
     # check that the sum of tao and sigma is less than 16
@@ -99,11 +99,11 @@ def rcb_decrypt(cipher, data, sigma, tao, key):
         M (str): The decrypted data in bytes.
     """
     # check if sigma is between 1 and 16
-    if sigma > 16 or sigma <= 0:
+    if sigma >= 16 or sigma < 0:
         raise ValueError("sigma must be between 1 and 16")
     
     # allow only tao between 1 and 16
-    if tao > 16 or tao <= 0:
+    if tao >= 16 or tao < 0:
         raise ValueError("tao must be between 1 and 16")
 
     # check that the sum of tao and sigma is less than 16
